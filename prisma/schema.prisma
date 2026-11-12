@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ResearchQuery {
+  id        String         @id @default(cuid())
+  queryText String
+  status    QueryStatus    @default(PENDING)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  papers    QueryPaper[]
+  report    AnalysisReport?
+}
+
+model Paper {
+  id            String      @id @default(cuid())
+  source        PaperSource
+  externalId    String?
+  title         String
+  authors       Json
+  abstract      String?
+  year          Int?
+  url           String?
+  venue         String?
+  citationCount Int?
+  doi           String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  queryLinks    QueryPaper[]
+
+  @@unique([source, externalId])
+}
+
+model QueryPaper {
+  id               String        @id @default(cuid())
+  queryId          String
+  paperId          String
+  relevanceScore   Float?
+  rank             Int?
+  summary          String?
+  keyContributions Json?
+  limitations      Json?
+  createdAt        DateTime      @default(now())
+  query            ResearchQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  paper            Paper         @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@unique([queryId, paperId])
+}
+
+model AnalysisReport {
+  id               String        @id @default(cuid())
+  queryId          String        @unique
+  overview         String
+  themes           Json
+  trends           Json
+  researchGaps     Json
+  futureDirections Json
+  methodologyNote  String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  query            ResearchQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+}
+
+enum PaperSource {
+  ARXIV
+  SEMANTIC_SCHOLAR
+}
+
+enum QueryStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
